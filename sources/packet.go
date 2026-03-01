@@ -1,4 +1,4 @@
-package packet
+package sources
 
 import (
 	"bytes"
@@ -37,41 +37,33 @@ func (hd *HardwareAddr) UnmarshalText(text []byte) error {
 	if err != nil {
 		return err
 	}
-	*hd = make(HardwareAddr, len(mac))
-	copy((*hd)[:], mac)
+	*hd = HardwareAddr(mac)
 	return nil
 }
 
 type Packet struct {
-	RequestID uint16 `json:"request"`
-	Type      uint16 `json:"id"`
-	Flag0     uint8  `json:"reserv"`
-	Flag1     uint8  `json:"check0"`
-	Flag2     uint8  `json:"check1"`
-	Status    uint8  `json:"status"`
+	RequestID   uint16 `json:"request_id"`
+	RequestType uint16 `json:"request_type"`
+	Flag0       uint8  `json:"flag0"`
+	Flag1       uint8  `json:"flag1"`
+	Flag2       uint8  `json:"flag2"`
+	Flag3       uint8  `json:"flag3"`
 
-	Mac    HardwareAddr `json:"mac_addr"`
-	Header []byte       `json:"-"`
-	Data   []byte       `json:"data"`
+	Header []byte `json:"-"`
+	Data   []byte `json:"data"`
 }
 
 func IsOltPacket(raw []byte) bool {
-	if len(raw) < 50 {
-		return false
-	}
 	return bytes.HasPrefix(raw, OltMagic)
 }
 
-func (pkt *Packet) Unmarshal(mac HardwareAddr, raw []byte) error {
-	if err := pkt.UnmarshalBinary(raw); err != nil {
-		return err
-	}
-	pkt.Mac = mac
-	return nil
+func Parse(data []byte) (*Packet, error) {
+	pkt := &Packet{}
+	return pkt, pkt.UnmarshalBinary(data)
 }
 
 func (pkt *Packet) UnmarshalBinary(raw []byte) error {
-	if len(raw) < 50 {
+	if !IsOltPacket(raw) {
 		return ErrNotValid
 	}
 
@@ -81,8 +73,8 @@ func (pkt *Packet) UnmarshalBinary(raw []byte) error {
 		pkt.Data = raw
 
 		pkt.RequestID = binary.BigEndian.Uint16(header[:2])
-		pkt.Type = binary.BigEndian.Uint16(header[2:4])
-		pkt.Status = uint8(header[4])
+		pkt.RequestType = binary.BigEndian.Uint16(header[2:4])
+		pkt.Flag3 = uint8(header[4])
 		pkt.Flag0 = uint8(header[5])
 		pkt.Flag1 = uint8(header[6])
 		pkt.Flag2 = uint8(header[7])
@@ -96,8 +88,8 @@ func (pkt Packet) MarshalBinary() ([]byte, error) {
 	header := make([]byte, len(OltMagic), 50)
 	copy(header, OltMagic)
 	header = binary.BigEndian.AppendUint16(header, pkt.RequestID)
-	header = binary.BigEndian.AppendUint16(header, pkt.Type)
-	header = append(header, byte(pkt.Status), byte(pkt.Flag0), byte(pkt.Flag1), byte(pkt.Flag2))
+	header = binary.BigEndian.AppendUint16(header, pkt.RequestType)
+	header = append(header, byte(pkt.Flag3), byte(pkt.Flag0), byte(pkt.Flag1), byte(pkt.Flag2))
 
 	if pkt.Data != nil {
 		copy(header[len(header):cap(header)], pkt.Data)
@@ -107,9 +99,9 @@ func (pkt Packet) MarshalBinary() ([]byte, error) {
 }
 
 func (pkt Packet) String() string {
-	return fmt.Sprintf("Request %d - Type 0x%x (0x%x), Status 0x%x (%s)", pkt.RequestID, pkt.Type, pkt.Id(), pkt.Status, hex.EncodeToString(pkt.Header))
+	return fmt.Sprintf("Request %d - Type 0x%x (0x%x), Status 0x%x (%s)", pkt.RequestID, pkt.RequestType, pkt.Id(), pkt.Flag3, hex.EncodeToString(pkt.Header))
 }
 
 func (pkt Packet) Id() int {
-	return int(pkt.Type)>>(int(pkt.Flag0)>>8) + (int(pkt.Flag1) | int(pkt.Flag2))
+	return int(pkt.RequestType)>>(int(pkt.Flag0)>>8) + (int(pkt.Flag1) | int(pkt.Flag2))
 }

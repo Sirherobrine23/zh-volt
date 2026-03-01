@@ -2,15 +2,14 @@ package pcap
 
 import (
 	"fmt"
-	"iter"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"sirherobrine23.com.br/Sirherobrine23/zh-volt/zhvolt/packet"
-	"sirherobrine23.com.br/Sirherobrine23/zh-volt/zhvolt/sources"
+	"sirherobrine23.com.br/Sirherobrine23/zh-volt/sources"
 )
 
 const (
@@ -28,19 +27,22 @@ var (
 )
 
 type Pcap struct {
-	macNetDev net.HardwareAddr
-	pkts      chan gopacket.Packet
+	macNetDev sources.HardwareAddr
+
+	pcapPackets chan gopacket.Packet
+	returnPkts  chan *sources.PacketRaw
+	onceStart   *sync.Once
 
 	pcapHandle   *pcap.Handle
 	packetSource *gopacket.PacketSource
 }
 
-func getInterfaceMAC(name string) net.HardwareAddr {
+func getInterfaceMAC(name string) sources.HardwareAddr {
 	iface, err := net.InterfaceByName(name)
 	if err != nil {
-		return net.HardwareAddr{0, 0, 0, 0, 0, 0}
+		return sources.HardwareAddr{0, 0, 0, 0, 0, 0}
 	}
-	return iface.HardwareAddr
+	return sources.HardwareAddr(iface.HardwareAddr)
 }
 
 func New(ifaceName string) (sources.Sources, error) {
@@ -52,8 +54,11 @@ func New(ifaceName string) (sources.Sources, error) {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	return &Pcap{
-		macNetDev: macNetDev,
-		pkts:      packetSource.Packets(),
+		macNetDev: sources.HardwareAddr(macNetDev),
+
+		pcapPackets: packetSource.Packets(),
+		returnPkts:  make(chan *sources.PacketRaw, 5000),
+		onceStart:   &sync.Once{},
 
 		pcapHandle:   handle,
 		packetSource: packetSource,
@@ -61,20 +66,29 @@ func New(ifaceName string) (sources.Sources, error) {
 }
 
 func (pcap *Pcap) Close() error {
+	if pcap.returnPkts != nil {
+		select {
+		case <-pcap.returnPkts:
+		default:
+			close(pcap.returnPkts)
+			pcap.returnPkts = nil
+		}
+	}
 	if pcap.pcapHandle != nil {
 		pcap.pcapHandle.Close()
 	}
 	return nil
 }
 
-func (pcap Pcap) MacAddr() net.HardwareAddr {
+func (pcap Pcap) MacAddr() sources.HardwareAddr {
 	return pcap.macNetDev
 }
 
-func (pcap *Pcap) GetPacketData() iter.Seq2[*sources.PacketRaw, error] {
-	return func(yield func(*sources.PacketRaw, error) bool) {
+func (pcap *Pcap) GetPkts() <-chan *sources.PacketRaw {
+	go pcap.onceStart.Do(func() {
 		defer pcap.Close()
-		for pkt := range pcap.pkts {
+		for pkt := range pcap.pcapPackets {
+			defer pcap.Close()
 			ethLayer := pkt.Layer(layers.LayerTypeEthernet)
 			if ethLayer == nil {
 				continue
@@ -85,21 +99,36 @@ func (pcap *Pcap) GetPacketData() iter.Seq2[*sources.PacketRaw, error] {
 				continue
 			}
 
-			if eth.EthernetType != layers.EthernetType(EthernetOltType) || !packet.IsOltPacket(eth.Payload) {
+			if eth.EthernetType != layers.EthernetType(EthernetOltType) || !sources.IsOltPacket(eth.Payload) {
 				continue
 			}
 
-			if !yield(&sources.PacketRaw{Data: eth.Payload, MacSrc: eth.SrcMAC}, nil) {
-				return
+			if sources.IsOltPacket(eth.Payload) {
+				pkt, err := sources.Parse(eth.Payload)
+				if pcap.returnPkts == nil {
+					return
+				}
+				pcap.returnPkts <- &sources.PacketRaw{
+					Error: err,
+					Pkt:   pkt,
+					Mac:   sources.HardwareAddr(eth.SrcMAC),
+				}
 			}
 		}
-	}
+	})
+
+	return pcap.returnPkts
 }
 
-func (pcap *Pcap) SendPacketData(dst net.HardwareAddr, data []byte) error {
+func (pcap *Pcap) SendPkt(pkt *sources.PacketRaw) error {
+	data, err := pkt.Pkt.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
 	eth := &layers.Ethernet{
-		SrcMAC:       pcap.macNetDev,
-		DstMAC:       dst,
+		SrcMAC:       pcap.macNetDev.Net(),
+		DstMAC:       pkt.Mac.Net(),
 		EthernetType: layers.EthernetType(EthernetOltType),
 	}
 
