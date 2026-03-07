@@ -1,30 +1,21 @@
 <div class="olt" hx-target="this" hx-swap="outerHTML" hx-get="/_update/{{.Mac}}" hx-trigger="every 1s">
-  <h2>OLT: {{ .Mac }} (Version {{ .FirmwareVersion }})</h2>
+  <div>
+    <h2>OLT: {{ .Mac }} (Version {{ .FirmwareVersion }}, OLT DNA: {{ .DNA }})</h2>
+  </div>
   <div class="olt_info">
-    <div>
-      <span>OLT DNA: {{ .DNA }}</span>
-    </div>
-    <div>
-      <span>Uptime: {{ .Uptime }}</span>
-    </div>
-    <div>
-      <span>Max ONU: {{ .MaxONU }}, Online ONUs {{ .OnlineONU}}</span>
-    </div>
-    <div>
-      <span>OMCI Mode: {{ .OMCIMode }}</span>
-    </div>
-    <div>
-      <span>Current Temperature: {{ .Temperature }}°C</span>
-    </div>
-    <div>
-      <span>Max Temperature: {{ .MaxTemperature }}°C</span>
-    </div>
-    <div>
-      <div class="onu">
-        {{ range $key, $value := .ONUs }}
-        {{ template "onu.tmpl" $value }}
-        {{ end }}
-      </div>
-    </div>
+    <ul>
+      <li><span>Max ONU: {{ .MaxONU }}, Online ONUs {{ .OnlineONU}}</span></li>
+      <li><span>OMCI Mode: {{ .OMCIMode }}, OMCI Errors {{ .OMCIErr }}</span></li>
+      <li><span>Current Temperature: {{ .Temperature }}°C</span></li>
+      <li><span>Max Temperature: {{ .MaxTemperature }}°C</span></li>
+      <li><span>Uptime: {{ .Uptime }}</span></li>
+      <li><span>Timeout for responses: {{ .TimeoutForResponse }}</span></li>
+      <li><span>Last Response: {{ .Response }}</span></li>
+    </ul>
+  </div>
+  <div class="onu">
+    {{ range $key, $value := .ONUs }}
+    {{ template "onu.tmpl" $value }}
+    {{ end }}
   </div>
 </div>

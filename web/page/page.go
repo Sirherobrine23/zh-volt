@@ -50,11 +50,16 @@ func NewPage(maneger *olt.OltManeger) *http.ServeMux {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache, private")
 
-		err := RenderPage(w, &Page{
-			PageBody: "home.tmpl",
-			Title:    "OLTs",
-			Data:     maneger.Olts(),
-		})
+		pg, err := GetPages()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error on render page: %s\n", err)
+			w.Header().Set("Content-Type", "text/plain; utf-8")
+			w.WriteHeader(500)
+			fmt.Fprintf(w, "error on render page: %s\n\n", err)
+			return
+		}
+
+		err = pg.Render("main.tmpl", w, maneger.Olts())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error on render page: %s\n", err)
 			w.Header().Set("Content-Type", "text/plain; utf-8")

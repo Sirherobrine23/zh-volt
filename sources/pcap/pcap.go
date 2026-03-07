@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	EthernetOltType = 0x88b6
-	Timeout         = time.Nanosecond * 400
+	EthernetOltType layers.EthernetType = 0x88b6
+	Timeout         time.Duration       = time.Nanosecond * 400
 )
 
 var (
@@ -102,56 +102,16 @@ func (pcap *Pcap) Slog(log *slog.Logger) {
 	pcap.log = slog.New(log.Handler().WithAttrs([]slog.Attr{slog.String("sources", pcap.macNetDev.String())}))
 }
 
-func (pcap *Pcap) processResponses(workderID int) {
-	defer pcap.Close()
-	log := pcap.log.With("WorkderID_PCAP", workderID)
-
-	for pkt := range pcap.pcapPackets {
-		ethLayer := pkt.Layer(layers.LayerTypeEthernet)
-		if ethLayer == nil {
-			log.Debug("layer droped", "string", pkt.String())
-			continue
-		}
-
-		eth := ethLayer.(*layers.Ethernet)
-		log.Debug("ethernet packet", "Source MAC Addr", eth.SrcMAC.String(), "Destination MAC Addr", eth.DstMAC.String(), "Ethernet type", eth.EthernetType.String())
-		if eth.SrcMAC.String() == pcap.macNetDev.String() {
-			log.Debug("Ignoring own packets", "Source MAC Addr", eth.SrcMAC.String(), "Destination MAC Addr", eth.DstMAC.String(), "Ethernet type", eth.EthernetType.String())
-			continue
-		}
-
-		if !(eth.EthernetType == layers.EthernetType(EthernetOltType) && sources.IsOltPacket(eth.Payload)) {
-			log.Debug("Droping non-olt packet", "Source MAC Addr", eth.SrcMAC.String(), "Destination MAC Addr", eth.DstMAC.String(), "Ethernet type", eth.EthernetType.String(), "Payload", hex.EncodeToString(eth.Payload))
-			continue
-		}
-
-		pkt, err := sources.Parse(eth.SrcMAC, eth.Payload)
-		if pcap.returnPkts == nil {
-			return
-		}
-		pkt.Error = err
-		if fn, ok := pcap.fnCallbacks.Get(pkt.RequestID); err == nil && ok {
-			if fn(pkt) {
-				pcap.fnCallbacks.Del(pkt.RequestID)
-			}
-			continue
-		}
-		pcap.returnPkts <- pkt
-	}
-}
-
-func (pcap *Pcap) GetPkts() <-chan *sources.Packet {
-	go pcap.onceStart.Do(func() {
-		for workderID := range runtime.NumCPU() {
-			go pcap.processResponses(workderID)
-		}
-	})
-	return pcap.returnPkts
-}
-
 func (pcap *Pcap) assignerPkt(raw *sources.Packet) {
 	pcap.reqLock.Lock()
 	defer pcap.reqLock.Unlock()
+	if pcap.CorrentRequest == sources.LimitForU16 {
+		pcap.log.Debug("Request ID Overflow")
+		pcap.fnCallbacks.CheckClear(func(key uint16, fn sources.ASyncFn) bool {
+			fn(&sources.Packet{Error: sources.ErrTimeout})
+			return true
+		})
+	}
 	pcap.CorrentRequest++
 	pcap.log.Debug("assigner pkt ID", "id", pcap.CorrentRequest)
 	raw.RequestID = pcap.CorrentRequest
@@ -161,17 +121,6 @@ func (pcap *Pcap) sendPkt(pkt *sources.Packet) error {
 	if pkt.Mac.String() == (&sources.HardwareAddr{}).String() {
 		return sources.ErrNotValid
 	}
-	if pkt.RequestID == sources.LimitForU16 {
-		pcap.log.Debug("reset callbacks")
-		pcap.fnCallbacks.CheckClear(func(key uint16, value sources.ASyncFn) bool {
-			if key == pkt.RequestID {
-				return false
-			}
-			value(&sources.Packet{Error: sources.ErrTimeout})
-			return true
-		})
-	}
-
 	pcap.log.Debug("sending pkt", "destination", pkt.Mac, "requestID", pkt.RequestID, "data", pkt.Encode())
 	buffer := gopacket.NewSerializeBuffer()
 	gopacket.SerializeLayers(buffer, optsSerealize, &layers.Ethernet{
@@ -197,9 +146,19 @@ func (pcap *Pcap) Send(pkt *sources.Packet, timeout ...time.Duration) (*sources.
 		timeup := timeout[0]
 
 		back := make(chan *sources.Packet, 1)
-		defer close(back)
+		defer func() {
+			pcap.fnCallbacks.Del(pkt.RequestID)
+			close(back)
+			back = nil
+		}()
+
 		pcap.fnCallbacks.Set(pkt.RequestID, func(pkt *sources.Packet) bool {
-			back <- pkt
+			if back != nil {
+				select {
+				case back <- pkt:
+				default:
+				}
+			}
 			return true
 		})
 		pcap.sendPkt(pkt)
@@ -215,4 +174,52 @@ func (pcap *Pcap) Send(pkt *sources.Packet, timeout ...time.Duration) (*sources.
 
 	// Send packet
 	return nil, pcap.sendPkt(pkt)
+}
+
+func (pcap *Pcap) processResponses(workderID int) {
+	defer pcap.Close()
+	log := pcap.log.With("WorkderID_PCAP", workderID)
+
+	for pkt := range pcap.pcapPackets {
+		ethLayer := pkt.Layer(layers.LayerTypeEthernet)
+		if ethLayer == nil {
+			continue
+		}
+
+		eth := ethLayer.(*layers.Ethernet)
+		if eth.SrcMAC.String() == pcap.macNetDev.String() {
+			log.Debug("Ignoring own packets", "Source MAC Addr", eth.SrcMAC.String(), "Destination MAC Addr", eth.DstMAC.String(), "Ethernet type", eth.EthernetType.String())
+			continue
+		}
+
+		if !(eth.EthernetType == layers.EthernetType(EthernetOltType) && sources.IsOltPacket(eth.Payload)) {
+			log.Debug("Droping non-olt packet", "Source MAC Addr", eth.SrcMAC.String(), "Destination MAC Addr", eth.DstMAC.String(), "Ethernet type", eth.EthernetType.String(), "Payload", hex.EncodeToString(eth.Payload))
+			continue
+		}
+
+		pkt := sources.Parse(eth.SrcMAC, eth.Payload)
+		if pkt.Error != nil {
+			log.Error("Error on parse packet", "error", pkt.Error)
+			continue
+		} else {
+			log.Debug("Packet", "requestID", pkt.RequestID, "pkt", pkt)
+		}
+
+		if fn, ok := pcap.fnCallbacks.Get(pkt.RequestID); pkt.Error == nil && ok {
+			if fn(pkt) {
+				pcap.fnCallbacks.Del(pkt.RequestID)
+			}
+			continue
+		}
+		pcap.returnPkts <- pkt
+	}
+}
+
+func (pcap *Pcap) GetPkts() <-chan *sources.Packet {
+	go pcap.onceStart.Do(func() {
+		for workderID := range runtime.NumCPU() {
+			go pcap.processResponses(workderID)
+		}
+	})
+	return pcap.returnPkts
 }

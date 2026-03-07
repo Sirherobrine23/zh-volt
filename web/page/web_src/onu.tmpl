@@ -1,7 +1,7 @@
 <div class="onu_info" status="{{.Status}}">
   <div class="onu_actions">
     <span class="onu_id">ID: {{ .ID }}</span>
-    <button>Disable</button>
+    <button>{{ if ne .Status 0 }}Disable{{else}}Enable{{end}}</button>
   </div>
   <div class="onu_data">
     <div>

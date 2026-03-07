@@ -88,11 +88,3 @@ func GetPages() (pages *Pages, err error) {
 
 	return
 }
-
-func RenderPage(w io.Writer, data *Page) (err error) {
-	pg, err := GetPages()
-	if err != nil {
-		return
-	}
-	return pg.Render("main.tmpl", w, data)
-}

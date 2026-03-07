@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	_ encoding.BinaryMarshaler   = &Packet{}
+	_ encoding.BinaryMarshaler   = Packet{}
 	_ encoding.BinaryUnmarshaler = &Packet{}
 
 	_ encoding.TextMarshaler   = HardwareAddr{}
@@ -18,7 +18,11 @@ var (
 
 	ErrNotValid = errors.New("packet not valid")
 	ErrNoMagic  = errors.New("packet have magic in star section")
-	OltMagic    = []byte{0xb9, 0x58, 0xd6, 0x3a}
+
+	staticBuff = make([]byte, 50)
+
+	NullMac  = HardwareAddr(make([]byte, 6))
+	OltMagic = []byte{0xb9, 0x58, 0xd6, 0x3a}
 )
 
 type HardwareAddr net.HardwareAddr
@@ -48,19 +52,30 @@ type Packet struct {
 	Flag2       uint8  `json:"flag2"`
 	Flag3       uint8  `json:"flag3"` // Old `Status` flag
 
-	Error  error        `json:"error"`
-	Mac    HardwareAddr `json:"mac"`
-	Header []byte       `json:"-"`
-	Data   []byte       `json:"data"`
+	Error error        `json:"error"`
+	Mac   HardwareAddr `json:"mac"`
+	Data  []byte       `json:"data"`
 }
 
 func IsOltPacket(raw []byte) bool {
 	return bytes.HasPrefix(raw, OltMagic)
 }
 
-func Parse[K HardwareAddr | net.HardwareAddr](mac K, data []byte) (*Packet, error) {
-	pkt := &Packet{Mac: HardwareAddr(mac)}
-	return pkt, pkt.UnmarshalBinary(data)
+func Parse[K HardwareAddr | net.HardwareAddr](mac K, data []byte) *Packet {
+	newMac := HardwareAddr(mac)
+	switch newMac.String() {
+	case "", (&HardwareAddr{}).String(), NullMac.String():
+		return &Packet{Error: ErrNotValid}
+	default:
+		if len(newMac) < 6 {
+			return &Packet{Error: ErrNotValid}
+		}
+	}
+	pkt := &Packet{Mac: newMac}
+	if err := pkt.UnmarshalBinary(data); err != nil {
+		pkt.Error = err
+	}
+	return pkt
 }
 
 func (pkt *Packet) UnmarshalBinary(raw []byte) error {
@@ -70,7 +85,6 @@ func (pkt *Packet) UnmarshalBinary(raw []byte) error {
 
 	if raw, ok := bytes.CutPrefix(raw, OltMagic); ok {
 		header, raw := raw[:8], raw[8:]
-		pkt.Header = header
 		pkt.Data = raw
 
 		pkt.RequestID = binary.BigEndian.Uint16(header[:2])
@@ -86,17 +100,23 @@ func (pkt *Packet) UnmarshalBinary(raw []byte) error {
 }
 
 func (pkt Packet) Encode() []byte {
-	header := make([]byte, len(OltMagic), 50)
-	copy(header, OltMagic)
-	header = binary.BigEndian.AppendUint16(header, pkt.RequestID)
-	header = binary.BigEndian.AppendUint16(header, pkt.RequestType)
-	header = append(header, byte(pkt.Flag3), byte(pkt.Flag0), byte(pkt.Flag1), byte(pkt.Flag2))
+	buff := new(bytes.Buffer)
+	buff.Grow(50)
 
+	buff.Write(OltMagic)
+	binary.Write(buff, binary.BigEndian, pkt.RequestID)
+	binary.Write(buff, binary.BigEndian, pkt.RequestType)
+	buff.WriteByte(pkt.Flag3)
+	buff.WriteByte(pkt.Flag0)
+	buff.WriteByte(pkt.Flag1)
+	buff.WriteByte(pkt.Flag2)
 	if pkt.Data != nil {
-		copy(header[len(header):cap(header)], pkt.Data)
+		buff.Write(pkt.Data)
 	}
-
-	return header[:cap(header)]
+	if buff.Len() < 50 {
+		buff.Write(staticBuff[:50-buff.Len()])
+	}
+	return buff.Bytes()
 }
 
 func (pkt Packet) MarshalBinary() ([]byte, error) { return pkt.Encode(), nil }
@@ -127,41 +147,49 @@ func (pkt Packet) Clone() *Packet {
 }
 
 func (pkt *Packet) SetMacAddr(mac HardwareAddr) *Packet {
+	pkt = pkt.Clone()
 	pkt.Mac = bytes.Clone(mac)
 	return pkt
 }
 
 func (pkt *Packet) SetNetMacAddr(mac net.HardwareAddr) *Packet {
+	pkt = pkt.Clone()
 	pkt.Mac = HardwareAddr(mac)
 	return pkt
 }
 
 func (pkt *Packet) SetRequestID(data uint16) *Packet {
+	pkt = pkt.Clone()
 	pkt.RequestID = data
 	return pkt
 }
 
 func (pkt *Packet) SetRequestType(data uint16) *Packet {
+	pkt = pkt.Clone()
 	pkt.RequestType = data
 	return pkt
 }
 
 func (pkt *Packet) SetFlag0(data uint8) *Packet {
+	pkt = pkt.Clone()
 	pkt.Flag0 = data
 	return pkt
 }
 
 func (pkt *Packet) SetFlag1(data uint8) *Packet {
+	pkt = pkt.Clone()
 	pkt.Flag1 = data
 	return pkt
 }
 
 func (pkt *Packet) SetFlag2(data uint8) *Packet {
+	pkt = pkt.Clone()
 	pkt.Flag2 = data
 	return pkt
 }
 
 func (pkt *Packet) SetFlag3(data uint8) *Packet {
+	pkt = pkt.Clone()
 	pkt.Flag3 = data
 	return pkt
 }

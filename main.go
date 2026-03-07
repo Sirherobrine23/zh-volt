@@ -20,9 +20,9 @@ import (
 )
 
 var app = &cli.Command{
-	Name:  "zhvolt",
-	Usage: "OLT monitor for Ainopol/Pacetech GPON OLTs",
-
+	Name:           "zhvolt",
+	Usage:          "Manager for Ainopol/Pacetech GPON OLTs",
+	DefaultCommand: "daemon",
 	Commands: []*cli.Command{
 		{
 			Name: "daemon",
@@ -81,11 +81,7 @@ var app = &cli.Command{
 					}
 				}
 
-				olts, err := zhvolt.NewOltProcess(ctx, pcapSource, slog.Level(c.Int8("verbose-level")), logPrint)
-				if err != nil {
-					return fmt.Errorf("cannot create olt process: %s", err)
-				}
-
+				olts := zhvolt.NewOltProcess(ctx, pcapSource, slog.Level(c.Int8("verbose-level")), logPrint)
 				if port := c.Uint16("http-port"); port > 0 {
 					tcp, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 					if err != nil {
@@ -118,4 +114,5 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Exit error: %s\n", err)
 		os.Exit(1)
 	}
+	fmt.Fprintf(os.Stderr, "\nExiting process!\n")
 }
