@@ -1,10 +1,8 @@
 # ZH-Volt
 
-Golang tools to maneger zh-volt(16|32|64) OLT
+Tool to manager zh-volt(16|32|64) OLTs.
 
-![Home](./ext/home.png)
-
-## Working
+## What's working for now?
 
 Currently we have few things that you can change, or visualize, the following things are possible:
 

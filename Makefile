@@ -1,13 +1,16 @@
-FINAL_FILE ?= zhVolt
 NETDEV ?= eth0
-LOG_LEVEL ?= -4
-LOG_FILE ?= debug.log
 
-build:
-	go build -v -o $(FINAL_FILE) .
+build: fmt
+	cargo build
+
+release: fmt
+	cargo build --release
+
+fmt:
+	cargo fmt
 
 clean:
-	rm -f $(FINAL_FILE)
+	rm -f ./target
 
 run: build
-	sudo ./$(FINAL_FILE) daemon -v $(LOG_LEVEL) -L $(LOG_FILE) -i $(NETDEV)
+	sudo RUST_BACKTRACE=1 ./target/debug/zh_volt -i $(NETDEV)

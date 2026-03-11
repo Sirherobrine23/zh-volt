@@ -1,0 +1,9 @@
+{
+	"admin/services/zh_volt": {
+		"title": "ZH-Volt",
+		"action": {
+			"type": "view",
+			"path": "zh_volt/status"
+		}
+	}
+}

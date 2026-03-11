@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+USE_PROCD=1
+
+start_service() {
+	config_load 'zh-volt'
+	local netdev http_listen
+
+	config_get netdev 'main' 'netdev' 'eth0'
+	config_get http_listen 'main' 'http_listen' '0.0.0.0:8081'
+
+	procd_open_instance
+	procd_set_param command /usr/bin/zh-volt
+	procd_append_param command -i "$netdev"
+	procd_append_param command -l "$http_listen"
+	procd_set_param respawn
+	procd_close_instance
+}
