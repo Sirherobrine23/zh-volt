@@ -1,22 +1,28 @@
 #!/bin/sh
 
+# onu_activate => (olt mac, onu id)
+# onu_deactivate => (olt mac, onu id)
+
 case "$1" in
 	list)
-		echo '{"status": {}}'
+		echo '{"status": {}, "onu_activate": {"olt_mac": "str", "onu_id": 32}, "onu_deactivate": {"olt_mac": "str", "onu_id": 32}}'
 		;;
 	call)
 		case "$2" in
+			onu_activate | onu_deactivate)
+				echo "{\"data\": true}"
+				;;
 			status)
 				SOCKET=$(uci -q get zh-volt.main.listen)
 				if [ -z "$SOCKET" ]; then
 					SOCKET="/var/run/zh-volt.sock"
 				fi
-				SOCKET=$(echo "$SOCKET" | sed 's/^unix://')
-				json=$(echo "1" | socat -t 2 - UNIX-CONNECT:"$SOCKET" 2>/dev/null)
+				# SOCKET=$(echo "$SOCKET" | sed 's/^unix://')
+				json=$(zh_volt maneger -c "$SOCKET" status -o json 2>/dev/null)
 				if [ -n "$json" ]; then
-					echo "{ \"data\": $json }"
+					echo "{\"data\": $json}"
 				else
-					echo '{ "data": [] }'
+					echo '{"data": []}'
 				fi
 				;;
 		esac

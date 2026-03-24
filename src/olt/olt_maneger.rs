@@ -1,10 +1,14 @@
 use crate::olt::olt::Olt;
 use crate::olt::packets::Packet;
 use crate::olt::pcap::{self, ErrPcap, Pcap};
-use std::collections::HashMap;
-use std::sync::{
-	Arc, Mutex, RwLock,
-	atomic::{AtomicBool, Ordering},
+use std::{
+	collections::HashMap,
+	sync::{
+		Arc, Mutex, RwLock,
+		atomic::{AtomicBool, Ordering},
+	},
+	thread,
+	time::Duration,
 };
 
 pub type SharedOltState = Arc<RwLock<HashMap<String, Arc<Mutex<Olt>>>>>;
@@ -28,7 +32,7 @@ pub fn get_olts_vec(olts: SharedOltState) -> Result<Vec<Olt>, ErrPcap> {
 
 pub fn new_pcap_dev(net_dev: String) -> Result<PcapShare, ErrPcap> {
 	let dev = match Pcap::new(net_dev) {
-		Err(err) => panic!("Error starting Pcap: {:?}", err),
+		Err(err) => return Err(err),
 		Ok(dev) => Arc::new(Mutex::new(dev)),
 	};
 	Ok(dev)
@@ -50,57 +54,53 @@ impl OltManager {
 	}
 
 	pub fn run(&mut self) {
-		println!("Send ping to OLTs with broadcast");
-		{
-			match self
-				.pcap
-				.lock()
-				.unwrap()
-				.send_packet(&Packet::new().set_request_type(0x000c).set_flag2(0xff))
-			{
-				Ok(_) => println!("Ping broadcast sent!"),
-				Err(err) => panic!("Error sending ping packet to get OLTs: {:?}", err),
-			}
-		}
-
-		let olts = self.olts.clone();
-
-		{
-			let pcap = self.pcap.clone();
-			let _ = self.pcap.lock().unwrap().send_packat_callback(
-				&Packet::new().set_request_type(0x000c).set_flag2(0xff),
-				move |pkt: Packet| {
-					let olts = olts.clone();
-					let pcap = pcap.clone();
-					let pkt_clone = pkt.clone();
-					let mut olts_guard = { olts.write().unwrap() };
-
-					match olts_guard.get_mut(&pkt.mac_dst.to_string()) {
-						Some(olt) => olt.lock().unwrap().process_packet(&pkt_clone),
-						None => {
-							let mac_dst = pkt.mac_dst;
-							let arc_olt = Arc::new(Mutex::new(Olt::new(mac_dst, pkt)));
-							olts_guard.insert(mac_dst.to_string(), arc_olt.clone());
-							println!("New OLT Discovery: {}", mac_dst.to_string());
-							let pcap_clone = pcap.clone();
-							let arc_olt_thread = arc_olt.clone();
-							std::thread::spawn(move || Olt::process(arc_olt_thread, mac_dst, pcap_clone));
-						}
-					};
-					Ok(true)
-				},
-			);
-			println!("sedd_packat_async_callback");
-		}
-
 		let pkts_channel = {
 			let pcap_guard = self.pcap.lock().unwrap();
 			pcap_guard.pkts.clone()
 		};
 
-		while self.running.load(Ordering::Relaxed) {
-			println!("waiting pkt...");
+		{
+			// let running = self.running;
+			let olts = self.olts.clone();
+			let pcap = self.pcap.clone();
+			thread::spawn(move || {
+				loop {
+					println!("Sending ping broadcast to detect new OLTs");
+					let olts = olts.clone();
+					let pcap = pcap.clone();
+					let pcap_callback = pcap.clone();
+					{
+						let _ = pcap_callback.lock().unwrap().send_packat_callback(
+							&Packet::new().set_request_type(0x000c).set_flag2(0xff),
+							move |pkt: Packet| {
+								let olts = olts.clone();
+								let pcap = pcap.clone();
+								let pkt_clone = pkt.clone();
+								let mut olts_guard = { olts.write().unwrap() };
 
+								match olts_guard.get_mut(&pkt.mac_dst.to_string()) {
+									Some(olt) => olt.lock().unwrap().process_packet(&pkt_clone),
+									None => {
+										let mac_dst = pkt.mac_dst;
+										let arc_olt = Arc::new(Mutex::new(Olt::new(mac_dst, pkt)));
+										olts_guard.insert(mac_dst.to_string(), arc_olt.clone());
+										println!("New OLT Discovery: {}", mac_dst.to_string());
+										let pcap_clone = pcap.clone();
+										let arc_olt_thread = arc_olt.clone();
+										thread::spawn(move || Olt::process(arc_olt_thread, mac_dst, pcap_clone));
+									}
+								};
+								Ok(true)
+							},
+						);
+					}
+					thread::sleep(Duration::from_secs(80));
+				}
+			});
+		}
+
+		while self.running.load(Ordering::Relaxed) {
+			println!("waiting drop pkt...");
 			let pkt = match pkts_channel.lock().unwrap().recv() {
 				Err(_) => {
 					self.running.store(false, Ordering::Relaxed);

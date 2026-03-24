@@ -4,7 +4,7 @@ use crate::olt::olt_maneger::{SharedOltState, get_olts_vec};
 use serde_json::to_string_pretty;
 use tiny_http::{Header, Response, Server};
 
-pub fn create_router(server: Server, state: SharedOltState) {
+pub fn process(server: Server, state: SharedOltState) {
 	std::thread::spawn(move || {
 		for req in server.incoming_requests() {
 			let h1 = Header::from_str("Content-Type: application/json").unwrap();

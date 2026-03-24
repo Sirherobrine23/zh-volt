@@ -1,0 +1,171 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:173
+msgid "%d / %d"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:162
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:163
+msgid "%s °C"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:150
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:190
+msgid "Actions"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:65
+msgid "Activating..."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/config.js:10
+msgid "Configure network interface and socket options for the daemon."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:133
+msgid "DNA OLT"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:65
+msgid "Deactivating..."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:199
+msgid "Disable"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:194
+msgid "Enable"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:82
+msgid "Error"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:132
+msgid "Firmware Version"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:186
+msgid "GPON SN"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:146
+msgid "GPON Serial Number (SN)"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/root/usr/share/rpcd/acl.d/luci-app-zh-volt.json:3
+msgid "Grant access to OLT Status app"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:144
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:184
+msgid "ID"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:98
+msgid "Loading data from OLT..."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/config.js:12
+msgid "Main Settings"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:135
+msgid "Max Temperature"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/config.js:15
+msgid "Network Interface"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:116
+msgid "No OLT discovered yet."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:93
+msgid "OLT Status (zh-volt)"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:128
+msgid "OLT information: %s"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:140
+msgid "ONU's status"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:164
+msgid "Online: %d / Max: %d"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:76
+msgid "Operation failed."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:74
+msgid "Operation successful."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:94
+msgid "Overview of the status of the OLT and ONUs connected to the network."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:149
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:189
+msgid "RX/TX Power"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/root/usr/share/luci/menu.d/luci-app-zh-volt.json:19
+msgid "Settings"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:145
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:185
+#: ext/openwrt/luci-app-zh-volt/root/usr/share/luci/menu.d/luci-app-zh-volt.json:11
+msgid "Status"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:134
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:188
+msgid "Temperature"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:148
+msgid "Temperature (°C)"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/config.js:16
+msgid ""
+"The physical or logical interface where the OLT is connected (e.g. eth0, "
+"sfp)."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/config.js:20
+msgid ""
+"UNIX socket path or HTTP address (e.g. /var/run/zh-volt.sock or "
+"0.0.0.0:8081)."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/config.js:19
+msgid "Unix Socket / Listening Address"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:131
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:147
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:187
+msgid "Uptime"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/status.js:61
+msgid "Wait..."
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/htdocs/luci-static/resources/view/zh_volt/config.js:9
+msgid "ZH-Volt Configuration"
+msgstr ""
+
+#: ext/openwrt/luci-app-zh-volt/root/usr/share/luci/menu.d/luci-app-zh-volt.json:3
+msgid "ZH-Volt OLT"
+msgstr ""

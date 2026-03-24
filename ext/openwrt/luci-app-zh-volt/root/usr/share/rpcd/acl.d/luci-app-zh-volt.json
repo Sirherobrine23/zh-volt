@@ -2,15 +2,21 @@
 	"luci-app-zh-volt": {
 		"description": "Grant access to OLT Status app",
 		"read": {
-			"uci": ["zh-volt"],
+			"uci": [
+				"zh-volt"
+			],
 			"ubus": {
 				"luci.zh_volt": [
-					"status"
+					"status",
+					"onu_activate",
+					"onu_deactivate"
 				]
 			}
 		},
 		"write": {
-			"uci": ["zh-volt"]
+			"uci": [
+				"zh-volt"
+			]
 		}
 	}
 }
