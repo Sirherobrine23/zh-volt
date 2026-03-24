@@ -3,7 +3,7 @@
 touch /etc/config/zh-volt
 uci set zh-volt.main=zh-volt
 uci set zh-volt.main.listen='/var/run/zh-volt.sock'
-uci set zh-volt.main.netdev=$(uci -q network.lan.device)
+uci set zh-volt.main.netdev=br-lan
 uci commit zh-volt
 
 return 0
